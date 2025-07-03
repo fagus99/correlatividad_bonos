@@ -46,24 +46,23 @@ if archivo:
 
         st.subheader("📦 Impacto por Intervalo de Bonos")
 
-        # Definir intervalos automáticos con pd.qcut o pd.cut
-        bonos_min = df["BONOS"].min()
-        bonos_max = df["BONOS"].max()
-        bins = pd.interval_range(start=bonos_min, end=bonos_max, periods=4)
+        # Definir intervalos automáticos por cuantiles o por estrategia de corte propia
+        q = df["BONOS"].quantile([0, 0.25, 0.5, 0.75, 1.0]).values
 
+        bins = [q[0], q[1], q[2], q[3], q[4]]
         etiquetas = ["bajo", "medio", "alto", "muy alto"]
-        df["intervalo_bonos"] = pd.cut(df["BONOS"], bins=bins, labels=etiquetas, include_lowest=True)
+        df["nivel_bonos"] = pd.cut(df["BONOS"], bins=bins, labels=etiquetas, include_lowest=True)
 
         # Mostrar los rangos generados
         rangos = pd.DataFrame({
-            "Intervalo bono": [f"{int(i.left):,} - {int(i.right):,}" for i in bins],
+            "Intervalo bono": [f"{int(bins[i]):,} - {int(bins[i+1]):,}" for i in range(len(bins)-1)],
             "Clasificación": etiquetas
         })
-        st.write("### Rangos definidos para clasificación de bonos")
+        st.write("### Rangos definidos para clasificación de bonos por día")
         st.dataframe(rangos)
 
         # Calcular resumen
-        resumen = df.groupby("intervalo_bonos").agg({
+        resumen = df.groupby("nivel_bonos").agg({
             "RETIROS": "mean",
             "GGR TOTAL": "mean",
             "ACREDITACIONES": "mean",
