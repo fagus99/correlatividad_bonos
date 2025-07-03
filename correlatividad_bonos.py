@@ -44,18 +44,36 @@ if archivo:
         st.subheader("📊 Bonos como % del GGR, Retiros y Acreditaciones")
         st.dataframe(df[["FECHA", "% BONOS vs GGR", "% BONOS vs RETIROS", "% BONOS vs ACREDITACIONES"]].round(2))
 
-        st.subheader("📦 Impacto por Nivel de Bonos")
-        df["nivel_bonos"] = pd.qcut(df["BONOS"], q=3, labels=["Bajo", "Medio", "Alto"])
-        resumen = df.groupby("nivel_bonos").agg({
+        st.subheader("📦 Impacto por Intervalo de Bonos")
+
+        # Definir intervalos automáticos con pd.qcut o pd.cut
+        bonos_min = df["BONOS"].min()
+        bonos_max = df["BONOS"].max()
+        bins = pd.interval_range(start=bonos_min, end=bonos_max, periods=4)
+
+        etiquetas = ["bajo", "medio", "alto", "muy alto"]
+        df["intervalo_bonos"] = pd.cut(df["BONOS"], bins=bins, labels=etiquetas, include_lowest=True)
+
+        # Mostrar los rangos generados
+        rangos = pd.DataFrame({
+            "Intervalo bono": [f"{int(i.left):,} - {int(i.right):,}" for i in bins],
+            "Clasificación": etiquetas
+        })
+        st.write("### Rangos definidos para clasificación de bonos")
+        st.dataframe(rangos)
+
+        # Calcular resumen
+        resumen = df.groupby("intervalo_bonos").agg({
             "RETIROS": "mean",
             "GGR TOTAL": "mean",
             "ACREDITACIONES": "mean",
             "BONOS": "mean"
         }).round(2).reset_index()
 
-        resumen["% Retiros vs Bajo"] = resumen["RETIROS"] / resumen["RETIROS"].iloc[0] * 100 - 100
-        resumen["% GGR vs Bajo"] = resumen["GGR TOTAL"] / resumen["GGR TOTAL"].iloc[0] * 100 - 100
-        resumen["% Acreditaciones vs Bajo"] = resumen["ACREDITACIONES"] / resumen["ACREDITACIONES"].iloc[0] * 100 - 100
+        base = resumen.iloc[0]
+        resumen["% Retiros vs Bajo"] = resumen["RETIROS"] / base["RETIROS"] * 100 - 100
+        resumen["% GGR vs Bajo"] = resumen["GGR TOTAL"] / base["GGR TOTAL"] * 100 - 100
+        resumen["% Acreditaciones vs Bajo"] = resumen["ACREDITACIONES"] / base["ACREDITACIONES"] * 100 - 100
 
         st.dataframe(resumen)
 
